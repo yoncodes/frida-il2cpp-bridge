@@ -9,9 +9,35 @@
 -   Il2Cpp structs and global metadata (almost) free
 
 
-### Dumps
+## Dumps
 - Modified the function to add more information
 - Added a couple helper functions that should help with generic types
+
+## How to build
+
+#### Step 1
+
+clone the source
+
+#### Step 2
+
+extract and cd into the directory
+
+#### Step 3
+
+npm run build
+
+#### Step 4
+
+npm link
+
+#### Step 5
+
+cd to project folder & type npm link frida-il2cpp-bridge
+
+#### Step 6
+
+now you should be able to use our version of frida-il2cpp-bridge
 
 ## Compatibility
 
