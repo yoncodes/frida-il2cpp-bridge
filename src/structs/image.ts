@@ -19,20 +19,62 @@ namespace Il2Cpp {
 
         /** Gets the classes defined in this image. */
         @lazy
-        get classes(): Il2Cpp.Class[] {
-            if (Il2Cpp.unityVersionIsBelow201830) {
-                const types = this.assembly.object.method<Il2Cpp.Array<Il2Cpp.Object>>("GetTypes").invoke(false);
-                // In Unity 5.3.8f1, getting System.Reflection.Emit.OpCodes type name
-                // without iterating all the classes first somehow blows things up at
-                // app startup, hence the `Array.from`.
-                const classes = globalThis.Array.from(types, _ => new Il2Cpp.Class(Il2Cpp.exports.classFromObject(_)));
-                classes.unshift(this.class("<Module>"));
-                return classes;
-            } else {
-                return globalThis.Array.from(globalThis.Array(this.classCount), (_, i) => new Il2Cpp.Class(Il2Cpp.exports.imageGetClass(this, i)));
-            }
-        }
+get classes(): Il2Cpp.Class[] {
+    try {
+        if (Il2Cpp.unityVersionIsBelow201830) {
+            const types = this.assembly.object.method<Il2Cpp.Array<Il2Cpp.Object>>("GetTypes").invoke(false);
 
+            if (!types) {
+                console.error("Failed to retrieve types from assembly.");
+                return [];
+            }
+
+            const classes = globalThis.Array.from(types, obj => {
+                try {
+                    if (!obj || obj.isNull()) {
+                        throw new Error("Null or invalid Il2Cpp.Object detected.");
+                    }
+
+                    const classPointer = Il2Cpp.exports.classFromObject(obj);
+                    if (!classPointer || classPointer.isNull()) {
+                        throw new Error("Failed to get class pointer from object.");
+                    }
+
+                    return new Il2Cpp.Class(classPointer);
+                } catch (error) {
+                    console.warn("Error processing class from object:", error);
+                    return null; // Filter out problematic objects
+                }
+            }).filter((klass): klass is Il2Cpp.Class => klass !== null);
+
+            classes.unshift(this.class("<Module>"));
+            return classes;
+        } else {
+            const classes = globalThis.Array.from(globalThis.Array(this.classCount), (_, i) => {
+                try {
+                    const classPointer = Il2Cpp.exports.imageGetClass(this, i);
+                    if (!classPointer || classPointer.isNull()) {
+                        throw new Error(`Invalid class pointer at index ${i}.`);
+                    }
+
+                    return new Il2Cpp.Class(classPointer);
+                } catch (error) {
+                    console.warn(`Error processing class at index ${i}:`, error);
+                    return null; // Filter out problematic indices
+                }
+            });
+
+            return classes.filter((klass): klass is Il2Cpp.Class => klass !== null);
+        }
+    } catch (error) {
+        console.error("Error retrieving classes:", error);
+        return [];
+    }
+}
+
+        
+
+        
         /** Gets the name of this image. */
         @lazy
         get name(): string {

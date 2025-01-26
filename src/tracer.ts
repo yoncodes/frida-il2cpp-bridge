@@ -285,33 +285,65 @@ namespace Il2Cpp {
 
         const applierWithParameters = (): Il2Cpp.Tracer.Apply => (method, state, threadId) => {
             const paddedVirtualAddress = method.relativeVirtualAddress.toString(16).padStart(8, "0");
-
             const startIndex = +!method.isStatic | +Il2Cpp.unityVersionIsBelow201830;
-
+        
             const callback = function (this: CallbackContext | InvocationContext, ...args: any[]) {
                 if ((this as InvocationContext).threadId == threadId) {
                     const thisParameter = method.isStatic ? undefined : new Il2Cpp.Parameter("this", -1, method.class.type);
                     const parameters = thisParameter ? [thisParameter].concat(method.parameters) : method.parameters;
-
-                    // prettier-ignore
-                    state.buffer.push(`\x1b[2m0x${paddedVirtualAddress}\x1b[0m ${`│ `.repeat(state.depth++)}┌─\x1b[35m${method.class.type.name}::\x1b[1m${method.name}\x1b[0m\x1b[0m(${parameters.map(e => `\x1b[32m${e.name}\x1b[0m = \x1b[31m${fromFridaValue(args[e.position + startIndex], e.type)}\x1b[0m`).join(", ")})`);
+            
+                    state.buffer.push(
+                        `\x1b[2m0x${paddedVirtualAddress}\x1b[0m ${`│ `.repeat(state.depth++)}┌─\x1b[35m${method.class.type.name}::\x1b[1m${method.name}\x1b[0m(${parameters.map(
+                            (e) =>
+                                `\x1b[32m${e.name}\x1b[0m = \x1b[31m${fromFridaValue(args[e.position + startIndex], e.type)}\x1b[0m`
+                        ).join(", ")})`
+                    );
                 }
-
-                const returnValue = method.nativeFunction(...args);
-
-                if ((this as InvocationContext).threadId == threadId) {
-                    // prettier-ignore
-                    state.buffer.push(`\x1b[2m0x${paddedVirtualAddress}\x1b[0m ${`│ `.repeat(--state.depth)}└─\x1b[33m${method.class.type.name}::\x1b[1m${method.name}\x1b[0m\x1b[0m${returnValue == undefined ? "" : ` = \x1b[36m${fromFridaValue(returnValue, method.returnType)}`}\x1b[0m`);
-                    state.flush();
+            
+                let returnValue: any;
+                try {
+                    // Check `this` for instance methods
+                    if (!method.isStatic && args[0].isNull()) {
+                        throw new Error(`'this' pointer is null for method ${method.class.type.name}::${method.name}`);
+                    }
+            
+                    // Validate native function
+                    if (!method.nativeFunction) {
+                        throw new Error(`Native function is null for method ${method.class.type.name}::${method.name}`);
+                    }
+            
+                    // Validate parameters
+                    args.forEach((arg, index) => {
+                        if (arg.isNull()) {
+                            console.warn(`Warning: Argument at position ${index} is null for method ${method.class.type.name}::${method.name}`);
+                        }
+                    });
+            
+                    // Call the native function
+                    returnValue = method.nativeFunction(...args);
+            
+                    if ((this as InvocationContext).threadId == threadId) {
+                        state.buffer.push(
+                            `\x1b[2m0x${paddedVirtualAddress}\x1b[0m ${`│ `.repeat(--state.depth)}└─\x1b[33m${method.class.type.name}::\x1b[1m${method.name}\x1b[0m${returnValue == undefined ? "" : ` = \x1b[36m${fromFridaValue(returnValue, method.returnType)}`}\x1b[0m`
+                        );
+                        state.flush();
+                    }
+                } catch (error) {
+                    console.error(`Error invoking method: ${method.class.type.name}::${method.name}`, error);
+                    returnValue = null;
                 }
-
+            
                 return returnValue;
             };
-
+            
+            
+        
+            // Revert the original method and replace it with our callback
             method.revert();
             const nativeCallback = new NativeCallback(callback, method.returnType.fridaAlias, method.fridaSignature);
             Interceptor.replace(method.virtualAddress, nativeCallback);
         };
+        
 
         return new Il2Cpp.Tracer(parameters ? applierWithParameters() : applier());
     }
