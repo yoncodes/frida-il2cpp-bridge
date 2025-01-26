@@ -1,4 +1,4 @@
-# frida-il2cpp-bridge
+# frida-il2cpp-bridge extended
 
 
 ## Features
