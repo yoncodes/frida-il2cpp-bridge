@@ -318,7 +318,8 @@ namespace Il2Cpp {
     
         file.flush();
         file.close();
-    
+        
+        console.log(`Dumped saved to: ${destination}`);
         const endTimer = Date.now();
         console.log(`Dump completed. Took ${(endTimer - startTimer) / 1000} seconds.`);
     }
