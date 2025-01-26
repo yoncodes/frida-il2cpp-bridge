@@ -271,7 +271,7 @@ namespace Il2Cpp {
         Il2Cpp.domain.assemblies.forEach((assembly) => {
             assembly.image.classes.forEach((klass) => {
                 try {
-                    console.log(`Processing Class: ${klass.name}, Flags: 0x${klass.flags.toString(16)}`);
+                    console.log(`Processing Class: ${buildClassHierarchy(klass)}`);
     
                     const modifiers = get_class_modifiers(klass.flags);
                     const attributes = get_class_attributes(klass.flags).join(" ");
