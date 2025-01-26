@@ -48,7 +48,7 @@ It should work for any Unity version in the range **5.3.0** - **2022.1.x**.
 #### Platforms
 
 **Android**, **Linux**, **Windows**, **iOS**, **macOS** are supported.
-However, only Android and Linux are "tested": expect breakage if you are using another platform.
+However, only Android was "tested": expect breakage if you are using another platform. 
 
 
 ## Acknowledgements
@@ -58,3 +58,7 @@ Thanks to [vfsfitvnm](https://github.com/vfsfitvnm) for the original Il2cpp-frid
 ## Notes
 
 Part of another Project I'm working on for a friend.
+
+## Side Note
+
+As of right now the dumps default path is data/data/com.package.name/files I original made this with android in mind.
