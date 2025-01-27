@@ -57,7 +57,7 @@ Thanks to [vfsfitvnm](https://github.com/vfsfitvnm) for the original Il2cpp-frid
 
 ## Notes
 
-Part of another Project I'm working on for a friend.
+Part of another Project I'm working on for a friend. [Frida Manager](https://github.com/yoncodes/frida_manager)
 
 ## Side Note
 
