@@ -325,6 +325,9 @@ namespace Il2Cpp {
     }
     
     
+    
+
+    
     /**
      * Builds the full hierarchical class name, including namespace and nested classes,
      * separated by "$$".
@@ -348,7 +351,86 @@ namespace Il2Cpp {
     }
     
     
+    export function dumpMethodsToJson(fileName?: string, path?: string): void {
+        const startTimer = Date.now();
+        
+        const ActivityThread = Java.use("android.app.ActivityThread");
+        const appContext = ActivityThread.currentApplication().getApplicationContext();
+        let privateDir = appContext.getFilesDir().getAbsolutePath();
+        
+        if (privateDir.startsWith("/data/user/0/")) {
+            privateDir = privateDir.replace("/data/user/0/", "/data/data/");
+        }
+        
+        fileName = fileName ?? "methods.json";
+        const destination = `${path ?? privateDir}/${fileName}`;
+        
+        console.log(`Starting JSON dump to ${destination}...`);
+        
+        const jsonDump: {
+            ScriptMethod: { Address: number; Name: string; Signature: string; TypeSignature: string }[];
+            ScriptString: { Address: number; Value: string }[];
+            ScriptMetadata: { Address: number; Name: string; Signature: string }[];
+            ScriptMetadataMethod: { Address: number; MethodAddress: number; Name: string }[];
+            Addresses: number[];
+        } = {
+            ScriptMethod: [],
+            ScriptString: [],
+            ScriptMetadata: [],
+            ScriptMetadataMethod: [],
+            Addresses: []
+        };
     
+        const il2cppBase = Number(Il2Cpp.module.base);
+        if (isNaN(il2cppBase) || il2cppBase <= 0) {
+            console.error(`Invalid Il2Cpp base address: ${Il2Cpp.module.base}`);
+            return;
+        }
+    
+        Il2Cpp.domain.assemblies.forEach((assembly) => {
+            assembly.image.classes.forEach((klass) => {
+                try {
+                    klass.methods?.forEach((method) => {
+                        if (!method || !method.virtualAddress || method.virtualAddress.toString(16).startsWith("fff")) return;
+    
+                        const methodAddress = Number(method.virtualAddress);
+                        if (methodAddress < il2cppBase || methodAddress === 0) {
+                            console.error(`Skipping method with invalid address: 0x${methodAddress.toString(16)}`);
+                            return;
+                        }
+    
+                        console.log(`Method: ${method.name}, VirtualAddress: 0x${methodAddress.toString(16)}, Il2Cpp Base: 0x${il2cppBase.toString(16)}`);
+    
+                        const adjustedMethodAddress = methodAddress - il2cppBase;
+    
+                        const className = klass.name ?? "UnknownClass";
+                        const methodName = method.name ?? "UnknownMethod";
+                        const fullMethodName = `${className}$$${methodName}`;
+                        
+                        jsonDump.ScriptMethod.push({
+                            Address: adjustedMethodAddress,
+                            Name: fullMethodName,
+                            Signature: "",
+                            TypeSignature: ""
+                        });
+                        
+                        console.log(`Added method: ${fullMethodName}`);
+                    });
+                } catch (error) {
+                    console.error(`Error processing class: ${klass.name}`, error);
+                }
+            });
+        });
+        
+        const file = new File(destination, "w");
+        file.write(JSON.stringify(jsonDump, null, 4));
+        file.flush();
+        file.close();
+        
+        console.log(`Dump saved to: ${destination}`);
+        const endTimer = Date.now();
+        console.log(`Dump completed. Took ${(endTimer - startTimer) / 1000} seconds.`);
+    }
     
     
 
